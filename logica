@@ -1,0 +1,100 @@
+import tkinter as tk
+from tkinter import messagebox 
+from pygame import mixer
+mixer.init()
+
+class Cancion:
+    def __init__(self, nombre, archivo):
+        self.nombre = nombre
+        self.archivo = archivo
+
+class Reproductor:
+    def __init__(self, ventana):
+        self.ventana = ventana
+        self.canciones = []  # Lista de canciones
+        self.cancion_actual = None  # Canción actual
+        self.listas_de_reproduccion = {
+            "Trap": [Cancion("Padre Tiempo - Eladio Carrion", "canciones/PadreTiempo.mp3"), Cancion("Chorrito Pa Las Ánimas - Feid", "canciones/ChorritoPaLasAnimas.mp3")],
+            "Varia": [Cancion("Haciendo Dinero - Eladio Carrion", "canciones/HaciendoDinero.mp3"), Cancion("Mala Mía Otra Vez - Eladio Carrion", "canciones/MalaMiaOtraVez.mp3")]
+        }
+
+        # Crear elementos de la interfaz gráfica
+        self.ventana.title("Reproductor de Audio")
+        self.icono = tk.PhotoImage(file="icono.png")  # Reemplaza "icono.png" con tu icono
+        self.ventana.tk.call('wm', 'iconphoto', self.ventana._w, self.icono)
+
+        # Sección para añadir listas de reproducción (background morado)
+        playlist_frame = tk.Frame(self.ventana, bg="purple", height=250)
+        playlist_frame.pack(fill="x")
+
+        # Agregar botones para las listas de reproducción
+        for lista in self.listas_de_reproduccion:
+            lista_button = tk.Button(playlist_frame, text=lista, command=lambda l=lista: self.mostrar_lista(l))
+            lista_button.pack(side="left")
+
+        # Sección para controlar el audio (background gris oscuro)
+        controls_frame = tk.Frame(self.ventana, bg="darkgray")
+        controls_frame.pack(fill="both", expand=True)
+
+        # Botones para controlar el audio (organizados horizontalmente)
+        self.play_button = tk.Button(controls_frame, text="Play", command=self.reproducir_cancion)
+        self.play_button.pack(side="left")
+
+        self.pause_button = tk.Button(controls_frame, text="Pause", command=self.pausar)
+        self.pause_button.pack(side="left")
+
+        self.next_button = tk.Button(controls_frame, text="Siguiente", command=self.siguiente_cancion)
+        self.next_button.pack(side="left")
+
+        self.favorite_button = tk.Button(controls_frame, text="Favorito", command=self.agregar_a_favoritos)
+        self.favorite_button.pack(side="left")
+
+    def mostrar_lista(self, nombre_lista):
+        lista_canciones = self.listas_de_reproduccion.get(nombre_lista, [])
+        nueva_ventana = tk.Toplevel(self.ventana)  # Crea una nueva ventana
+        nueva_ventana.title(nombre_lista)
+
+        # Botón "Regresar" en la parte superior izquierda
+        regresar_button = tk.Button(nueva_ventana, text="Regresar", command=nueva_ventana.destroy)
+        regresar_button.grid(row=0, column=0, padx=10, pady=10, sticky="nw")
+
+        # Botones de canciones en la nueva ventana
+        for i, cancion in enumerate(lista_canciones):
+            cancion_button = tk.Button(nueva_ventana, text=cancion.nombre, command=lambda c=cancion: self.reproducir_cancion(c))
+            cancion_button.grid(row=i + 1, column=0, padx=10, pady=5, sticky="w")
+
+  
+
+    # Métodos de Reproductor
+    def reproducir_cancion(self, cancion):
+        # Lógica para reproducir una canción
+        if cancion:
+            mixer.music.load(cancion.archivo)
+            mixer.music.play()
+
+    def pausar(self):
+        # Lógica para pausar la canción
+        if mixer.music.get_busy():
+            mixer.music.pause()
+        else:
+            mixer.music.unpause()
+
+    def siguiente_cancion(self):
+        # Lógica para reproducir la siguiente canción
+        pass
+
+    def agregar_a_favoritos(self):
+        # Lógica para agregar la canción a favoritos
+        pass
+
+    def agregar_cancion(self, cancion):
+        self.canciones.append(cancion)
+
+if __name__ == "__main__":
+    ventana = tk.Tk()
+    ventana.geometry("600x290")
+
+
+    reproductor = Reproductor(ventana)
+
+    ventana.mainloop()
