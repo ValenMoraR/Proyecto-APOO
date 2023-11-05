@@ -1,0 +1,155 @@
+import tkinter as tk
+from tkinter import messagebox 
+import pygame
+from pygame import mixer
+import random
+import threading 
+
+pygame.init()
+mixer.init()
+
+class Cancion:
+    def __init__(self, nombre, archivo):
+        self.nombre = nombre
+        self.archivo = archivo
+        self.es_favorita = False
+
+class Reproductor:
+    def __init__(self, ventana):
+        self.ventana = ventana
+        self.canciones = []  # Lista de canciones
+        self.cancion_actual = None  # Canción actual
+        self.lista_activa = None
+        self.listas_de_reproduccion = {
+            "Trap": [Cancion("Padre Tiempo - Eladio Carrion", "canciones/PadreTiempo.mp3"), Cancion("Chorrito Pa Las Ánimas - Feid", "canciones/ChorritoPaLasAnimas.mp3")],
+            "Varia": [Cancion("Haciendo Dinero - Eladio Carrion", "canciones/HaciendoDinero.mp3"), Cancion("Mala Mía Otra Vez - Eladio Carrion", "canciones/MalaMiaOtraVez.mp3")],
+            "Favoritos": [Cancion("Haciendo Dinero - Eladio Carrion", "canciones/HaciendoDinero.mp3")]  # Lista de reproducción "Favoritos"
+        }
+
+        # Crear elementos de la interfaz gráfica
+        self.ventana.title("Reproductor de Audio")
+        self.icono = tk.PhotoImage(file="icono.png")  # Reemplaza "icono.png" con tu icono
+        self.ventana.tk.call('wm', 'iconphoto', self.ventana._w, self.icono)
+
+        # Sección para añadir listas de reproducción (background morado)
+        playlist_frame = tk.Frame(self.ventana, bg="purple", height=250)
+        playlist_frame.pack(fill="x")
+
+        # Agregar botones para las listas de reproducción
+        for lista in self.listas_de_reproduccion:
+            lista_button = tk.Button(playlist_frame, text=lista, command=lambda l=lista: self.mostrar_lista(l))
+            lista_button.pack(side="left")
+
+        # Sección para controlar el audio (background gris oscuro)
+        controls_frame = tk.Frame(self.ventana, bg="darkgray")
+        controls_frame.pack(fill="both", expand=True)
+
+        # Botones para controlar el audio (organizados horizontalmente)
+        self.pause_button = tk.Button(controls_frame, text="Pause", command=self.pausar)
+        self.pause_button.pack(side="left")
+
+        self.next_button = tk.Button(controls_frame, text="Siguiente", command=self.siguiente_cancion)
+        self.next_button.pack(side="left")
+
+        self.favorite_button = tk.Button(controls_frame, text="Favorito", command=self.agregar_a_favoritos)
+        self.favorite_button.pack(side="left")
+
+    def mostrar_lista(self, nombre_lista):
+        lista_canciones = self.listas_de_reproduccion.get(nombre_lista, [])
+        nueva_ventana = tk.Toplevel(self.ventana)  # Crea una nueva ventana
+        nueva_ventana.title(nombre_lista)
+
+        # Botón "Regresar" en la parte superior izquierda
+        regresar_button = tk.Button(nueva_ventana, text="Regresar", command=nueva_ventana.destroy)
+        regresar_button.grid(row=0, column=0, padx=10, pady=10, sticky="nw")
+
+        # Botones de canciones en la nueva ventana
+        for i, cancion in enumerate(lista_canciones):
+            cancion_button = tk.Button(nueva_ventana, text=cancion.nombre, command=lambda c=cancion: self.reproducir_cancion(c))
+            cancion_button.grid(row=i + 1, column=0, padx=10, pady=5, sticky="w")
+
+        # Botón "Reproducir" para todas las canciones en orden aleatorio
+        reproducir_button = tk.Button(nueva_ventana, text="Reproducir esta Playlist", command=lambda lc=lista_canciones: self.reproducir_aleatoriamente(lc))
+        reproducir_button.grid(row=len(lista_canciones) + 1, column=0, padx=10, pady=10, sticky="w")
+
+         # Actualizar la lista activa al mostrar una lista de reproducción
+        self.lista_activa = self.listas_de_reproduccion.get(nombre_lista, [])
+
+
+    # Métodos de Reproductor
+    def reproducir_cancion(self, cancion):
+        # Lógica para reproducir una canción
+        if cancion:
+            self.cancion_actual = cancion
+            mixer.music.load(cancion.archivo)
+            mixer.music.play()
+            print(self.cancion_actual.nombre)
+
+    def pausar(self):
+        # Lógica para pausar la canción
+        if mixer.music.get_busy():
+            mixer.music.pause()
+            print("Canción Pausada")
+        else:
+            mixer.music.unpause()
+            print("Canción renaudada")
+
+    def mostrar_favoritos(self):
+        # Actualizar la lista "Favoritos" en el diccionario
+        if self.cancion_actual in self.listas_de_reproduccion["Favoritos"]:
+            self.listas_de_reproduccion["Favoritos"].remove(self.cancion_actual)
+            print(f"{self.cancion_actual.nombre} Removida")
+        else:
+            self.listas_de_reproduccion["Favoritos"].append(self.cancion_actual)
+            print(f"{self.cancion_actual.nombre} Agregada")
+
+    def agregar_a_favoritos(self):
+         if self.cancion_actual:
+            # Marcar o desmarcar la canción como favorita
+            self.cancion_actual.es_favorita = not self.cancion_actual.es_favorita
+            self.mostrar_favoritos()
+
+
+    def reproducir_aleatoriamente(self, lista_canciones):
+        if lista_canciones:
+            # Detener la canción actual si se está reproduciendo
+            pygame.mixer.music.stop()
+
+            # Reproducir las canciones en un orden aleatorio en un hilo separado
+            def reproducir_hilo():
+                canciones_aleatorias = lista_canciones.copy()
+                random.shuffle(canciones_aleatorias)
+
+                for cancion in canciones_aleatorias:
+                    mixer.music.load(cancion.archivo)
+                    mixer.music.play()
+                    self.cancion_actual = cancion
+                    while mixer.music.get_busy():
+                        pygame.time.Clock().tick(10)  # Evitar bloquear la GUI
+
+            # Crea un hilo para reproducir la música
+            hilo = threading.Thread(target=reproducir_hilo)
+            hilo.start()
+
+    def siguiente_cancion(self):
+        if self.lista_activa:
+            # Detener la canción actual si se está reproduciendo
+            mixer.music.stop()
+
+            # Obtener una canción aleatoria de la lista activa
+            cancion_aleatoria = random.choice(self.lista_activa)
+
+            # Reproducir la canción aleatoria
+            mixer.music.load(cancion_aleatoria.archivo)
+            mixer.music.play()
+            self.cancion_actual = cancion_aleatoria
+            print("Canción omitida")
+            print(self.cancion_actual.nombre)
+
+if __name__ == "__main__":
+    ventana = tk.Tk()
+    ventana.geometry("400x100")
+
+    reproductor = Reproductor(ventana)
+    
+    ventana.mainloop()
